@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome</title>
+    <script src="/js/jquery-3.4.1.min.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1 style="text-align:center;">Hello World</h1>
+<button id="welcome">欢迎</button>
+<br/><br/>
+<button onclick="forceLogOut()">登出</button>
+<hr/>
+
+<h3>认证信息</h3>
+<!--认证 /start-->
+<!--/*@thymesVar type="org.springframework.security.core.Authentication"*/-->
+<div th:if="${#authentication.isAuthenticated()}">
+    用户名-1：<span th:text="${#authentication.name}"></span>
+    <br/>
+    用户名-2：<span sec:authentication="name"></span>
+    <br/>
+    <!--/*@thymesVar type="org.springframework.security.core.Authentication.getPrincipal()"*/-->
+    权限：<span sec:authentication="principal.authorities"></span>
+</div>
+<!--认证 /end-->
+<hr/>
+
+<h3>授权信息</h3>
+<!--授权 /start-->
+<!--/*@thymesVar type="org.thymeleaf.extras.springsecurity5.auth.Authorization"*/-->
+<div th:if="${#authorization.getAuthentication()}">
+    是否认证：<span sec:authorize="isAuthenticated()">是</span>
+    <br/>
+    是否管理员-1：<span th:if="${#authorization.expression('hasRole(''ADMIN'')')}">是</span>
+    <br/>
+    是否管理员-2：<span sec:authorize="hasRole('ADMIN')">是</span>
+    <br/>
+    是否管理员-3：<span sec:authorize="${hasRole(#vars.expectedRole)}">是</span>
+    <br/>
+    用户角色：<span id="role"></span>
+</div>
+<!--授权 /end-->
+<hr/>
+
+<h3>路径控制</h3>
+<!--路径 /start-->
+<div sec:authorize-url="/channel/admin">
+    只有能以<b>GET</b>方式访问/channel/admin才会显示此文本块
+</div>
+<!--suppress ThymeleafVariablesResolveInspection -->
+<div sec:authorize-url="POST /channel/user">
+    只有能以<b>POST</b>方式访问/channel/user 才会显示此文本块
+</div>
+<!--路径 /end-->
+<hr/>
+
+<!--<div sec:authorize-acl="${obj} :: '1,3'">
+    只有有权限1,3才会显示上下文对象obj。
+    这一块太麻烦了，需要另外配置acl，看看就好。
+</div>-->
+<h3>其他页面</h3>
+<!--其他页面-->
+<a href="/channel" target="_self">通道页面</a>
+<br/><br/>
+<a href="/channelS" target="_self">通道S页面</a>
+<br/><br/>
+<a href="/channelT" target="_self">通道T页面</a>
+
+<script type="text/javascript" th:inline="javascript">
+    //欢迎
+    $("#welcome").click(function () {
+        alert("Hello World");
+    });
+
+    //获取认证的角色
+    $(function () {
+        let authentication = [[${#authorization.getAuthentication()}]];
+        console.log(authentication);
+        if (authentication) {
+            let ROLE = authentication["authorities"][0]["authority"];
+            $("#role").text(ROLE);
+        }
+    });
+
+    //登出
+    function forceLogOut() {
+        // noinspection HtmlUnknownTarget
+        $("body").html("<form name='_logout' action='/logout' method='post' style='display:none'></form>");
+        $("form[name='_logout']").submit();
+    }
+</script>
+</body>
+</html>

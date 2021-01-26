@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>ChannelT</title>
+    <script src="/js/jquery-3.4.1.min.js" type="text/javascript"></script>
+</head>
+<body>
+<h3>首页</h3>
+<a href="/" target="_self">首页</a>
+<hr/>
+
+<h3>认证信息</h3>
+<!--认证 /start-->
+<!--/*@thymesVar type="org.springframework.security.core.Authentication"*/-->
+<div th:if="${#authentication.isAuthenticated()}">
+    用户名：<span sec:authentication="name"></span>
+    <br/>
+    <!--/*@thymesVar type="org.springframework.security.core.Authentication.getPrincipal()"*/-->
+    权限：<span sec:authentication="principal.authorities"></span>
+</div>
+<!--认证 /end-->
+<hr/>
+
+<h3>通道</h3>
+<button id="user_channel">用户通道</button>
+<br/><br/>
+<button id="admin_channel">管理员通道</button>
+<br/><br/>
+<button id="common_channel">管理员和用户通道</button>
+<br/><br/>
+<button id="anon_channel">匿名通道</button>
+<hr/>
+
+<h3>回调信息</h3>
+<hr/>
+<div id="msg"></div>
+<hr/>
+<div id="status"></div>
+
+<script type="text/javascript">
+    //用户通道
+    $("#user_channel").click(function () {
+        console.log("----user_channel----");
+        $.ajax({
+            url: "/channelT/user",
+            type: "GET",
+            success: function (data, textStatus) {
+                console.log("----data----");
+                console.log(data);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                $("#msg").text(data);
+                $("#status").text(textStatus);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                console.log("----XMLHttpRequest----");
+                console.log(XMLHttpRequest);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                console.log("----errorThrown----");
+                console.log(errorThrown);
+                $("#msg").text(XMLHttpRequest.responseText);
+                $("#status").text(textStatus);
+            }
+        });
+    });
+
+    //管理员通道
+    $("#admin_channel").click(function () {
+        console.log("----admin_channel----");
+        $.ajax({
+            url: "/channelT/admin",
+            type: "GET",
+            success: function (data, textStatus) {
+                console.log("----data----");
+                console.log(data);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                $("#msg").text(data);
+                $("#status").text(textStatus);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                console.log("----XMLHttpRequest----");
+                console.log(XMLHttpRequest);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                console.log("----errorThrown----");
+                console.log(errorThrown);
+                $("#msg").text(XMLHttpRequest.responseText);
+                $("#status").text(textStatus);
+            }
+        });
+    });
+
+    //管理员和用户通道
+    $("#common_channel").click(function () {
+        console.log("----admin_channel----");
+        $.ajax({
+            url: "/channelT/common",
+            type: "GET",
+            success: function (data, textStatus) {
+                console.log("----data----");
+                console.log(data);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                $("#msg").text(data);
+                $("#status").text(textStatus);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                console.log("----XMLHttpRequest----");
+                console.log(XMLHttpRequest);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                console.log("----errorThrown----");
+                console.log(errorThrown);
+                $("#msg").text(XMLHttpRequest.responseText);
+                $("#status").text(textStatus);
+            }
+        });
+    });
+
+    //匿名通道
+    $("#anon_channel").click(function () {
+        console.log("----admin_channel----");
+        $.ajax({
+            url: "/channelT/anon",
+            type: "GET",
+            success: function (data, textStatus) {
+                console.log("----data----");
+                console.log(data);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                $("#msg").text(data);
+                $("#status").text(textStatus);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                console.log("----XMLHttpRequest----");
+                console.log(XMLHttpRequest);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                console.log("----errorThrown----");
+                console.log(errorThrown);
+                $("#msg").text(XMLHttpRequest.responseText);
+                $("#status").text(textStatus);
+            }
+        });
+    });
+</script>
+</body>
+</html>
