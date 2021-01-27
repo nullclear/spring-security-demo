@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.security.Principal;
 
@@ -56,15 +57,25 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     public void configure(WebSecurity web) throws Exception {
         // Spring Security should completely ignore URLs starting with /external/
         // 通过访问 /external/index.html 来进行测试
-        web.ignoring().antMatchers("/external/**", "/js/**");
+        web.ignoring().antMatchers("/external/**", "/js/**", "/favicon.ico");
     }
 
     /**
+     * -----
+     * defaultSuccessUrl("/") 重定向
+     * successForwardUrl("/") 转发
+     * 区别：
+     * successForwardUrl是内部强制转发，不会记忆认证前的请求路径，比如你在/Hello路径下被拦截需要认证，认证后路径跳转到/login，页面显示/的内容
+     * defaultSuccessUrl看源码可以发现，会记忆认证前的请求路径，比如你在/Hello路径下被拦截需要认证，认证后路径跳转到/Hello，页面显示/的内容
+     * 当然，如果采用defaultSuccessUrl("/", true)这个方法，效果和successForwardUrl基本上一致
+     * -----
+     * <p>
      * 配置路径认证
      */
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
+                .antMatchers("/mobile/failure").permitAll()//这个一定要放行，不然会无限跳转
                 .antMatchers(HttpMethod.GET, "/channel/anon").permitAll()//@Secured("IS_AUTHENTICATED_ANONYMOUSLY")
                 .antMatchers(HttpMethod.GET, "/channel/admin").hasRole("ADMIN")//sec:authorize-url="/channel/admin"
                 .antMatchers(HttpMethod.POST, "/channel/user").hasRole("USER")//sec:authorize-url="POST /channel/user"
@@ -75,10 +86,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .loginProcessingUrl("/login")//登录表单的action地址 可以自定义
                 .defaultSuccessUrl("/")//登录成功后默认跳转的路径 见dev.yxy.controller.HelloController.index()
                 .failureUrl("/auth?error=true")//登录失败后默认跳转的路径 见dev.yxy.controller.HelloController.login()
+                .usernameParameter("username")//可以自定义参数名称
+                .passwordParameter("password")//可以自定义参数名称
                 .permitAll()//以上路径全放行
                 .and()
                 .logout()//登出
-                .logoutUrl("/logout")//登出路径，需要POST请求
+                //.logoutUrl("/logout")//登出路径，需要POST请求
+                .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST", false))//与logoutUrl功能一致，可以修改请求方式
                 .logoutSuccessUrl("/auth")//登出成功后默认跳转的路径
                 .and()
                 .csrf().disable();//关闭跨域请求 不然登不上

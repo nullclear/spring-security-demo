@@ -3,6 +3,8 @@ package dev.yxy.controller;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * Created by Nuclear on 2021/1/26
@@ -16,8 +18,23 @@ public class HelloController {
      * @return 登录页面
      */
     @GetMapping("/auth")
-    public String login() {
-        return "login";
+    public String login(@RequestHeader(value = "Accept", required = false) String accept) {
+        System.out.println(accept);
+        if (accept != null && accept.contains("text/html")) {
+            return "login";
+        } else {
+            return "redirect:/mobile/failure";
+        }
+    }
+
+    /**
+     * 移动设备登录失败
+     * 此路径需要在配置中放行，不然会无限重定向
+     */
+    @GetMapping("/mobile/failure")
+    @ResponseBody
+    public String failure() {
+        return "移动设备登录失败";
     }
 
     /**
@@ -26,9 +43,22 @@ public class HelloController {
      * @return 首页
      */
     @GetMapping("/")
-    public String index(Model model) {
-        model.addAttribute("expectedRole", "ADMIN");
-        return "index";
+    public String index(@RequestHeader(value = "Accept", required = false) String accept, Model model) {
+        if (accept != null && accept.contains("text/html")) {
+            model.addAttribute("expectedRole", "ADMIN");
+            return "index";
+        } else {
+            return "redirect:/mobile/success";
+        }
+    }
+
+    /**
+     * 移动设备登录成功
+     */
+    @GetMapping("/mobile/success")
+    @ResponseBody
+    public String success() {
+        return "欢迎使用移动设备";
     }
 
     /**
