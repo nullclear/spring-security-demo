@@ -1,6 +1,8 @@
 package dev.yxy.config;
 
+import dev.yxy.service.UserService;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -11,7 +13,7 @@ import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.security.Principal;
@@ -24,9 +26,14 @@ import java.security.Principal;
 //开启方法注解
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
+    @Autowired
+    private UserService userService;
+
     @Bean
     PasswordEncoder passwordEncoder() {
-        return NoOpPasswordEncoder.getInstance();
+        // 测试可以用下面这个对前端传过来的密码不加密的PasswordEncoder
+        // NoOpPasswordEncoder.getInstance()
+        return new BCryptPasswordEncoder();
     }
 
     /**
@@ -34,12 +41,12 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication()
-                .withUser("jack").password("123456").roles("ADMIN")
-                .and()
-                .withUser("rose").password("123456").roles("USER")
-                .and()
-                .withUser("tony").password("123456").roles("VISITOR");
+        // 内存用户
+        //auth.inMemoryAuthentication().withUser("jack").password("123456").roles("ADMIN")
+        //        .and().withUser("rose").password("123456").roles("USER")
+        //        .and().withUser("tony").password("123456").roles("VISITOR");
+
+        auth.userDetailsService(userService);
     }
 
     /**
@@ -77,6 +84,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .csrf().disable();//关闭跨域请求 不然登不上
     }
 
+    // 手动判断用户权限
     public static boolean isAdmin(@Nullable Principal principal) {
         if (principal == null) {
             return false;

@@ -1,0 +1,54 @@
+package dev.yxy.service;
+
+import dev.yxy.util.DBUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by Nuclear on 2021/1/27
+ */
+@Service
+public class UserService implements UserDetailsService {
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        logger.info("申请登录的用户名：{}", username);
+        if (username == null) {
+            throw new UsernameNotFoundException("非法用户名");
+        }
+        return deluxe(username);
+    }
+
+    private UserDetails common(String username) {
+        List<String> list = DBUtil.getUser(username);
+        if (list == null) {
+            throw new UsernameNotFoundException("不存在的用户");
+        }
+        return User.withUsername(list.get(0)).password(list.get(1)).roles(list.get(2))
+                .passwordEncoder(s -> passwordEncoder.encode(s)) //假如数据库里存的是明文，可以用此方法生成密文，然后与前端传过来的加密过的密码比对
+                .build();
+    }
+
+    private UserDetails deluxe(String username) {
+        UserDetails userDetails = DBUtil.getUserDetails(username);
+        if (userDetails == null) {
+            throw new UsernameNotFoundException("不存在的用户");
+        }
+        return User.withUserDetails(userDetails)
+                .passwordEncoder(s -> passwordEncoder.encode(s)) //假如数据库里存的是明文，可以用此方法生成密文，然后与前端传过来的加密过的密码比对
+                .build();
+    }
+}
