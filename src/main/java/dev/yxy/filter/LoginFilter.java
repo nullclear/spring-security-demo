@@ -1,0 +1,108 @@
+package dev.yxy.filter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.util.StringUtils;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.security.Principal;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 1. 首先登录请求肯定是 POST，如果不是 POST ，直接抛出异常，后面的也不处理了。
+ * 2. 因为要在这里处理验证码，所以第二步从 session 中把已经下发过的验证码的值拿出来。
+ * 3. 接下来通过 contentType 来判断当前请求是否通过 JSON 来传递参数，
+ * 如果是通过 JSON 传递参数，则按照 JSON 的方式解析，
+ * 如果不是，则调用 super.attemptAuthentication 方法，进入父类的处理逻辑中，也就是说，
+ * 我们自定义的这个类，既支持 JSON 形式传递参数，也支持 key/value 形式传递参数。
+ * 4. 如果是 JSON 形式的数据，我们就通过读取 request 中的 I/O 流，将 JSON 映射到一个 Map 上。
+ * 5. 从 Map 中取出 captcha，先去判断验证码是否正确，如果验证码有错，则直接抛出异常。
+ * 6. 接下来从 Map 中取出 username 和 password，构造 UsernamePasswordAuthenticationToken 对象并作校验。
+ * Created by Nuclear on 2021/1/28
+ */
+public class LoginFilter extends UsernamePasswordAuthenticationFilter {
+
+    public LoginFilter() {
+        this.setAuthenticationSuccessHandler((request, response, authentication) -> {
+            //response.setContentType("application/json;charset=utf-8");
+            PrintWriter out = response.getWriter();
+            Principal principal = (Principal) authentication.getPrincipal();
+            out.write(principal.getName());
+            out.flush();
+            out.close();
+        });
+
+        this.setAuthenticationFailureHandler((request, response, exception) -> {
+            //response.setContentType("application/json;charset=utf-8");
+            PrintWriter out = response.getWriter();
+            if (exception instanceof LockedException) {
+                logger.info("账户被锁定，请联系管理员!");
+            } else if (exception instanceof CredentialsExpiredException) {
+                logger.info("密码过期，请联系管理员!");
+            } else if (exception instanceof AccountExpiredException) {
+                logger.info("账户过期，请联系管理员!");
+            } else if (exception instanceof DisabledException) {
+                logger.info("账户被禁用，请联系管理员!");
+            } else if (exception instanceof BadCredentialsException) {
+                logger.info("用户名或者密码输入错误，请重新输入!");
+            }
+            out.write(new ObjectMapper().writeValueAsString(exception.getMessage()));
+            out.flush();
+            out.close();
+        });
+
+        this.setFilterProcessesUrl("/login");
+    }
+
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        if (!request.getMethod().equals("POST")) {
+            throw new AuthenticationServiceException("Authentication method not supported: " + request.getMethod());
+        }
+
+        String captcha = (String) request.getSession().getAttribute("captcha");
+
+        if (request.getContentType().equals(MediaType.APPLICATION_JSON_VALUE) || request.getContentType().equals(MediaType.APPLICATION_JSON_UTF8_VALUE)) {
+            Map<String, String> loginData = new HashMap<>();
+            try {
+                //noinspection unchecked
+                loginData = (Map<String, String>) (new ObjectMapper().readValue(request.getInputStream(), Map.class));
+            } catch (IOException e) {
+                throw new AuthenticationServiceException("登录数据解析错误");
+            } finally {
+                String requestCaptcha = loginData.get("captcha");
+                checkCode(requestCaptcha, captcha);
+            }
+            String username = loginData.get(getUsernameParameter());
+            String password = loginData.get(getPasswordParameter());
+            if (username == null) {
+                username = "";
+            }
+            if (password == null) {
+                password = "";
+            }
+            username = username.trim();
+            UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
+            setDetails(request, authRequest);
+            return this.getAuthenticationManager().authenticate(authRequest);
+        } else {
+            checkCode(request.getParameter("captcha"), captcha);
+            return super.attemptAuthentication(request, response);
+        }
+    }
+
+    public void checkCode(String requestCaptcha, String captcha) {
+        if (StringUtils.isEmpty(requestCaptcha) || StringUtils.isEmpty(captcha) || requestCaptcha.equalsIgnoreCase(captcha)) {
+            //验证码不正确
+            throw new AuthenticationServiceException("验证码不正确");
+        }
+    }
+}

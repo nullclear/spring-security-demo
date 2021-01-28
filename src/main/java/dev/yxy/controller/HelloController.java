@@ -18,12 +18,11 @@ public class HelloController {
      * @return 登录页面
      */
     @GetMapping("/auth")
-    public String login(@RequestHeader(value = "Accept", required = false) String accept) {
-        System.out.println(accept);
-        if (accept != null && accept.contains("text/html")) {
-            return "login";
-        } else {
+    public String login(@RequestHeader(value = "X-Type", required = false) String type) {
+        if ("Mobile".equalsIgnoreCase(type)) {
             return "redirect:/mobile/failure";
+        } else {
+            return "login";
         }
     }
 
@@ -43,12 +42,12 @@ public class HelloController {
      * @return 首页
      */
     @GetMapping("/")
-    public String index(@RequestHeader(value = "Accept", required = false) String accept, Model model) {
-        if (accept != null && accept.contains("text/html")) {
+    public String index(@RequestHeader(value = "X-Type", required = false) String type, Model model) {
+        if ("Mobile".equalsIgnoreCase(type)) {
+            return "redirect:/mobile/success";
+        } else {
             model.addAttribute("expectedRole", "ADMIN");
             return "index";
-        } else {
-            return "redirect:/mobile/success";
         }
     }
 

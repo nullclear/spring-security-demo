@@ -1,5 +1,6 @@
 package dev.yxy.config;
 
+import dev.yxy.filter.CaptchaFilter;
 import dev.yxy.service.UserService;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.security.Principal;
@@ -26,6 +28,9 @@ import java.security.Principal;
 @EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true, proxyTargetClass = true)
 //开启方法注解
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private CaptchaFilter captchaFilter;
 
     @Autowired
     private UserService userService;
@@ -52,6 +57,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
      * 配置忽略的路径
+     * 请注意：
+     * 这里的忽略是真正的忽略，不只是放行
+     * 假如将Controller里的映射路径配置到这里，请求会被直接无视
+     * 只有作为静态资源的第一次请求才会被响应
+     * 参考验证码前端生成的图片的src
      */
     @Override
     public void configure(WebSecurity web) throws Exception {
@@ -74,8 +84,12 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        //加入前置过滤器
+        http.addFilterBefore(captchaFilter, UsernamePasswordAuthenticationFilter.class);
+        //匹配规则
         http.authorizeRequests()
-                .antMatchers("/mobile/failure").permitAll()//这个一定要放行，不然会无限跳转
+                .mvcMatchers("/auth").permitAll()//比较粗糙的匹配，可以放行所有/auth开头的路径，ant匹配即使写了/auth?code也没法放行/auth?code
+                .antMatchers("/captcha", "/mobile/failure").permitAll()//这个一定要放行，不然会无限跳转
                 .antMatchers(HttpMethod.GET, "/channel/anon").permitAll()//@Secured("IS_AUTHENTICATED_ANONYMOUSLY")
                 .antMatchers(HttpMethod.GET, "/channel/admin").hasRole("ADMIN")//sec:authorize-url="/channel/admin"
                 .antMatchers(HttpMethod.POST, "/channel/user").hasRole("USER")//sec:authorize-url="POST /channel/user"
@@ -94,6 +108,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 //.logoutUrl("/logout")//登出路径，需要POST请求
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST", false))//与logoutUrl功能一致，可以修改请求方式
                 .logoutSuccessUrl("/auth")//登出成功后默认跳转的路径
+                .deleteCookies("CAPTCHA")//可以配置登出时想要清除的Cookie
+                .clearAuthentication(true)//清除认证信息，默认就是true
+                .invalidateHttpSession(true)//使Session无效化，默认就是true
                 .and()
                 .csrf().disable();//关闭跨域请求 不然登不上
     }
