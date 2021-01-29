@@ -1,6 +1,7 @@
 package dev.yxy.filter;
 
 import dev.yxy.config.WebSecurityConfig;
+import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -76,7 +77,14 @@ public class CaptchaFilter extends GenericFilter {
                 }
 
                 //校验验证码
-                if (!captcha.equalsIgnoreCase(requestCode)) {
+                if (!captcha.equalsIgnoreCase(requestCode)) //noinspection DanglingJavadoc
+                {
+                    //throw new AuthenticationServiceException("验证码错误");
+                    /**
+                     * todo 这里有个问题
+                     * 如果在这里抛出异常 和 在 {@link LoginFilter} 中抛出异常是不一样的，
+                     * 这里抛出的异常不会被传递到 {@link CustomizeAuthenticationFailureHandler }
+                     */
                     logger.warn("验证码错误");
                     response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
                     response.sendRedirect("/auth?captcha=true");

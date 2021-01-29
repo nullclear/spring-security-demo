@@ -12,6 +12,7 @@
             <h1 class="page-header" th:unless="${param.error}">用户登录</h1>
             <h1 class="page-header" th:if="${param.error}">用户名或密码错误</h1>
             <h5 class="page-header" th:if="${param.captcha}">验证码错误</h5>
+            <h5 class="page-header" th:if="${param.msg}" th:text="${param.msg}"></h5>
             <form method="post" action="/login">
                 <div class="form-group">
                     <label for="username">用户名：</label>

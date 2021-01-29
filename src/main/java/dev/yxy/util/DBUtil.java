@@ -25,6 +25,8 @@ public class DBUtil {
         document.put("jack", Member.builder().username("jack").password("123456").roles("ADMIN,USER").build());
         document.put("rose", Member.builder().username("rose").password("123456").roles("USER").build());
         document.put("tony", Member.builder().username("tony").password("123456").roles("VISITOR").build());
+        document.put("mike", Member.builder().username("mike").password("123456").roles("ADMIN").build());
+        document.put("tom", Member.builder().username("tom").password("123456").roles("USER").accountLocked(true).build());
     }
 
     @Nullable

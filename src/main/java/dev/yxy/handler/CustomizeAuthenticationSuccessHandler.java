@@ -29,8 +29,12 @@ public class CustomizeAuthenticationSuccessHandler extends SavedRequestAwareAuth
         if ("Mobile".equalsIgnoreCase(request.getHeader("X-Type"))) {
             response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
             PrintWriter out = response.getWriter();
-            UserDetails principal = (UserDetails) authentication.getPrincipal();
-            out.write(Response.success(principal));
+            if (authentication != null) {
+                UserDetails principal = (UserDetails) authentication.getPrincipal();
+                out.write(Response.success(principal));
+            } else {
+                out.write("登录成功了为什么没有认证信息？");
+            }
             out.flush();
             out.close();
         } else {

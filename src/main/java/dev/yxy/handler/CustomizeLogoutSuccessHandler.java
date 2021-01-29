@@ -27,14 +27,16 @@ public class CustomizeLogoutSuccessHandler extends SimpleUrlLogoutSuccessHandler
     public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         //如果是移动设备，就返回Json数据，如果不是移动设备，就调用父类的逻辑
         if ("Mobile".equalsIgnoreCase(request.getHeader("X-Type"))) {
+            response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
+            PrintWriter out = response.getWriter();
             if (authentication != null) {
-                response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
-                PrintWriter out = response.getWriter();
                 UserDetails principal = (UserDetails) authentication.getPrincipal();
                 out.write(Response.success(String.format("再见，%s", principal.getUsername()), null));
-                out.flush();
-                out.close();
+            } else {
+                out.write(Response.exception("你都没登录，点个屁啊"));
             }
+            out.flush();
+            out.close();
         } else {
             super.onLogoutSuccess(request, response, authentication);
         }
