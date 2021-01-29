@@ -1,6 +1,11 @@
 package dev.yxy.config;
 
 import dev.yxy.filter.CaptchaFilter;
+import dev.yxy.filter.LoginFilter;
+import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
+import dev.yxy.handler.CustomizeAuthenticationSuccessHandler;
+import dev.yxy.handler.CustomizeEntryPoint;
+import dev.yxy.handler.CustomizeLogoutSuccessHandler;
 import dev.yxy.service.UserService;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,35 +89,47 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        //加入前置过滤器
-        http.addFilterBefore(captchaFilter, UsernamePasswordAuthenticationFilter.class);
-        //匹配规则
+        //todo 加入前置过滤器
+        //http.addFilterBefore(captchaFilter, UsernamePasswordAuthenticationFilter.class);
+
+        //todo 匹配规则
         http.authorizeRequests()
                 .mvcMatchers("/auth").permitAll()//比较粗糙的匹配，可以放行所有/auth开头的路径，ant匹配即使写了/auth?code也没法放行/auth?code
                 .antMatchers("/captcha", "/mobile/failure").permitAll()//这个一定要放行，不然会无限跳转
                 .antMatchers(HttpMethod.GET, "/channel/anon").permitAll()//@Secured("IS_AUTHENTICATED_ANONYMOUSLY")
                 .antMatchers(HttpMethod.GET, "/channel/admin").hasRole("ADMIN")//sec:authorize-url="/channel/admin"
                 .antMatchers(HttpMethod.POST, "/channel/user").hasRole("USER")//sec:authorize-url="POST /channel/user"
-                .anyRequest().authenticated()//任何请求路径都需要认证
-                .and()
-                .formLogin()//表单登录
+                .anyRequest().authenticated();//任何请求路径都需要认证
+
+        //todo 配置登录逻辑
+        http.formLogin()//表单登录
                 .loginPage("/auth")//登录页面 见dev.yxy.controller.HelloController.login()
                 .loginProcessingUrl("/login")//登录表单的action地址 可以自定义
-                .defaultSuccessUrl("/")//登录成功后默认跳转的路径 见dev.yxy.controller.HelloController.index()
-                .failureUrl("/auth?error=true")//登录失败后默认跳转的路径 见dev.yxy.controller.HelloController.login()
+                //.defaultSuccessUrl("/")//登录成功后默认跳转的路径 见dev.yxy.controller.HelloController.index()
+                .successHandler(new CustomizeAuthenticationSuccessHandler("/"))//自定义认证成功处理器 与defaultSuccessUrl("/")选一个就行
+                //.failureUrl("/auth?error=true")//登录失败后默认跳转的路径 见dev.yxy.controller.HelloController.login()
+                .failureHandler(new CustomizeAuthenticationFailureHandler("/auth?error=true"))//自定义认证失败处理器 与failureUrl("/auth?error=true")选一个就行
                 .usernameParameter("username")//可以自定义参数名称
                 .passwordParameter("password")//可以自定义参数名称
-                .permitAll()//以上路径全放行
-                .and()
-                .logout()//登出
+                .permitAll();//以上路径全放行
+
+        //todo 配置登出逻辑
+        http.logout()//登出
                 //.logoutUrl("/logout")//登出路径，需要POST请求
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST", false))//与logoutUrl功能一致，可以修改请求方式
-                .logoutSuccessUrl("/auth")//登出成功后默认跳转的路径
+                //.logoutSuccessUrl("/auth")//登出成功后默认跳转的路径
+                .logoutSuccessHandler(new CustomizeLogoutSuccessHandler("/auth"))//自定义登出成功处理器 与logoutSuccessUrl("/auth")选一个就行
                 .deleteCookies("CAPTCHA")//可以配置登出时想要清除的Cookie
                 .clearAuthentication(true)//清除认证信息，默认就是true
-                .invalidateHttpSession(true)//使Session无效化，默认就是true
-                .and()
-                .csrf().disable();//关闭跨域请求 不然登不上
+                .invalidateHttpSession(true);//使Session无效化，默认就是true
+
+        http.addFilterAt(new LoginFilter(authenticationManagerBean()), UsernamePasswordAuthenticationFilter.class);
+
+        //todo 配置未认证处理方案
+        http.exceptionHandling().authenticationEntryPoint(new CustomizeEntryPoint("/auth"));//配置了这个 loginPage("/auth") 其实可以去掉，不过放着也没事 会被覆盖
+
+        //todo 关闭跨域请求 不然登不上
+        http.csrf().disable();
     }
 
     // 手动判断用户权限

@@ -1,8 +1,12 @@
 package dev.yxy.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
+import dev.yxy.handler.CustomizeAuthenticationSuccessHandler;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -11,8 +15,6 @@ import org.springframework.util.StringUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,36 +32,11 @@ import java.util.Map;
  */
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
-    public LoginFilter() {
-        this.setAuthenticationSuccessHandler((request, response, authentication) -> {
-            //response.setContentType("application/json;charset=utf-8");
-            PrintWriter out = response.getWriter();
-            Principal principal = (Principal) authentication.getPrincipal();
-            out.write(principal.getName());
-            out.flush();
-            out.close();
-        });
-
-        this.setAuthenticationFailureHandler((request, response, exception) -> {
-            //response.setContentType("application/json;charset=utf-8");
-            PrintWriter out = response.getWriter();
-            if (exception instanceof LockedException) {
-                logger.info("账户被锁定，请联系管理员!");
-            } else if (exception instanceof CredentialsExpiredException) {
-                logger.info("密码过期，请联系管理员!");
-            } else if (exception instanceof AccountExpiredException) {
-                logger.info("账户过期，请联系管理员!");
-            } else if (exception instanceof DisabledException) {
-                logger.info("账户被禁用，请联系管理员!");
-            } else if (exception instanceof BadCredentialsException) {
-                logger.info("用户名或者密码输入错误，请重新输入!");
-            }
-            out.write(new ObjectMapper().writeValueAsString(exception.getMessage()));
-            out.flush();
-            out.close();
-        });
-
+    public LoginFilter(AuthenticationManager authenticationManager) {
+        this.setAuthenticationSuccessHandler(new CustomizeAuthenticationSuccessHandler("/"));
+        this.setAuthenticationFailureHandler(new CustomizeAuthenticationFailureHandler("/auth?error=true"));
         this.setFilterProcessesUrl("/login");
+        this.setAuthenticationManager(authenticationManager);
     }
 
     @Override
@@ -100,7 +77,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     }
 
     public void checkCode(String requestCaptcha, String captcha) {
-        if (StringUtils.isEmpty(requestCaptcha) || StringUtils.isEmpty(captcha) || requestCaptcha.equalsIgnoreCase(captcha)) {
+        if (StringUtils.isEmpty(requestCaptcha) || StringUtils.isEmpty(captcha) || !requestCaptcha.equalsIgnoreCase(captcha)) {
             //验证码不正确
             throw new AuthenticationServiceException("验证码不正确");
         }
