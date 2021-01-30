@@ -1,5 +1,8 @@
 package dev.yxy.controller;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,6 +61,18 @@ public class HelloController {
     @ResponseBody
     public String success() {
         return "欢迎使用移动设备";
+    }
+
+    /**
+     * 获取认证信息
+     */
+    @GetMapping("/info")
+    @ResponseBody
+    public UserDetails getInfo(Authentication authentication) {
+        WebAuthenticationDetails details = (WebAuthenticationDetails) authentication.getDetails();
+        System.out.println("details.getRemoteAddress() = " + details.getRemoteAddress());
+        System.out.println("details.getSessionId() = " + details.getSessionId());
+        return ((UserDetails) authentication.getPrincipal());
     }
 
     /**

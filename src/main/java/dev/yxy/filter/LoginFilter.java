@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.yxy.config.WebSecurityConfig;
 import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
 import dev.yxy.handler.CustomizeAuthenticationSuccessHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
@@ -43,6 +45,7 @@ import java.util.Objects;
  * Created by Nuclear on 2021/1/28
  */
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
+    private static final Logger logger = LoggerFactory.getLogger(LoginFilter.class);
 
     private static final String httpMethod = "POST";
 
@@ -74,6 +77,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         if (!httpMethod.equalsIgnoreCase(request.getMethod())) {
             throw new AuthenticationServiceException("[LoginFilter] Authentication method not supported: " + request.getMethod());
         }
+
+        logger.info("请求登录的IP：[{}]", request.getRemoteAddr());
 
         // 获取session中的验证码，当然这个可以改成从redis获取验证码，参考CaptchaFilter
         String captcha = (String) request.getSession().getAttribute("captcha");

@@ -1,26 +1,34 @@
 package dev.yxy.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Created by Nuclear on 2021/1/27
  */
-public class Member implements UserDetails {
+public class Member implements UserDetails, CredentialsContainer {
     private static final long serialVersionUID = 6703014957557809028L;
 
     private String username = "";
+    @JsonIgnore
     private String password = "";
     private String roles = "";
     private boolean accountExpired;
     private boolean accountLocked;
     private boolean credentialsExpired;
     private boolean disabled;
+
+    public Member() {
+    }
 
     private Member(Builder builder) {
         setUsername(builder.username);
@@ -68,6 +76,8 @@ public class Member implements UserDetails {
         this.disabled = disabled;
     }
 
+    //Jackson 只有getter也会被json化，如果不想要就去掉吧
+    @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<GrantedAuthority> authorities = new ArrayList<>();
@@ -113,12 +123,15 @@ public class Member implements UserDetails {
     }
 
     @Override
+    public void eraseCredentials() {
+        password = null;
+    }
+
+    @Override
     public String toString() {
         return "{"
                 + "\"username\":\""
                 + username + '\"'
-                + ",\"password\":\""
-                + password + '\"'
                 + ",\"roles\":\""
                 + roles + '\"'
                 + ",\"accountExpired\":"
@@ -140,53 +153,63 @@ public class Member implements UserDetails {
         private boolean accountLocked;
         private boolean credentialsExpired;
         private boolean disabled;
+        private Function<String, String> passwordEncoder = password -> password;
 
         private Builder() {
         }
 
-        public Builder username(String val) {
-            username = val;
+        public Builder username(String username) {
+            Assert.notNull(username, "username cannot be null");
+            this.username = username;
             return this;
         }
 
-        public Builder password(String val) {
-            password = val;
+        public Builder password(String password) {
+            Assert.notNull(password, "password cannot be null");
+            this.password = password;
+            return this;
+        }
+
+        public Builder passwordEncoder(Function<String, String> encoder) {
+            Assert.notNull(encoder, "encoder cannot be null");
+            this.passwordEncoder = encoder;
             return this;
         }
 
         public Builder roles(String... role) {
-            StringBuilder b = new StringBuilder();
+            StringBuilder builder = new StringBuilder();
             int max = role.length - 1;
             for (int i = 0; i < role.length; i++) {
-                b.append(role[i]);
+                builder.append(role[i]);
                 if (i == max) break;
-                b.append(",");
+                builder.append(",");
             }
-            roles = b.toString();
+            this.roles = builder.toString();
             return this;
         }
 
-        public Builder accountExpired(boolean val) {
-            accountExpired = val;
+        public Builder accountExpired(boolean accountExpired) {
+            this.accountExpired = accountExpired;
             return this;
         }
 
-        public Builder accountLocked(boolean val) {
-            accountLocked = val;
+        public Builder accountLocked(boolean accountLocked) {
+            this.accountLocked = accountLocked;
             return this;
         }
 
-        public Builder credentialsExpired(boolean val) {
-            credentialsExpired = val;
+        public Builder credentialsExpired(boolean credentialsExpired) {
+            this.credentialsExpired = credentialsExpired;
             return this;
         }
 
-        public Builder disabled(boolean val) {
-            disabled = val;
+        public Builder disabled(boolean disabled) {
+            this.disabled = disabled;
             return this;
         }
 
         public Member build() {
+            this.password = this.passwordEncoder.apply(password);
             return new Member(this);
         }
     }

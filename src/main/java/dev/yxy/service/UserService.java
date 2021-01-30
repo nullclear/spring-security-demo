@@ -47,8 +47,6 @@ public class UserService implements UserDetailsService {
         if (userDetails == null) {
             throw new UsernameNotFoundException("不存在的用户");
         }
-        return User.withUserDetails(userDetails)
-                .passwordEncoder(s -> passwordEncoder.encode(s)) //假如数据库里存的是明文，可以用此方法生成密文，然后与前端传过来的加密过的密码比对
-                .build();
+        return userDetails;
     }
 }
