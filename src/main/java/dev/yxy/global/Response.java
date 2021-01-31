@@ -161,25 +161,11 @@ public class Response {
         return toJson(result);
     }
 
-
-    // 线程隔离的ObjectMapper
+    // 线程隔离的 ObjectMapper
     private static final ThreadLocal<ObjectMapper> THREAD_LOCAL = ThreadLocal.withInitial(Response::init);
 
     /**
-     * ObjectMapper实例
-     */
-    @NotNull
-    private static ObjectMapper instance() {
-        ObjectMapper mapper = THREAD_LOCAL.get();
-        if (mapper == null) {
-            mapper = init();
-            THREAD_LOCAL.set(mapper);
-        }
-        return mapper;
-    }
-
-    /**
-     * 初始ObjectMapper
+     * 初始化 ObjectMapper
      */
     @NotNull
     private static ObjectMapper init() {
@@ -206,8 +192,20 @@ public class Response {
     }
 
     /**
+     * ObjectMapper 实例
+     */
+    @NotNull
+    private static ObjectMapper instance() {
+        ObjectMapper mapper = THREAD_LOCAL.get();
+        if (mapper == null) {
+            mapper = init();
+            THREAD_LOCAL.set(mapper);
+        }
+        return mapper;
+    }
+
+    /**
      * 可以将任意类型对象转为Json
-     * 如果是无效的类型，将会转为{}
      *
      * @param obj 任意类型对象
      * @return json格式数据

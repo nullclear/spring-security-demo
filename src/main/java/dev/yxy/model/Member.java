@@ -26,6 +26,8 @@ public class Member implements UserDetails, CredentialsContainer {
     private boolean accountLocked;
     private boolean credentialsExpired;
     private boolean disabled;
+    // 版本号
+    private int version;
 
     public Member() {
     }
@@ -74,6 +76,14 @@ public class Member implements UserDetails, CredentialsContainer {
 
     public void setDisabled(boolean disabled) {
         this.disabled = disabled;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     //Jackson 只有getter也会被json化，如果不想要就去掉吧

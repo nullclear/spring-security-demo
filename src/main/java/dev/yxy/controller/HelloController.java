@@ -1,11 +1,15 @@
 package dev.yxy.controller;
 
+import dev.yxy.model.Member;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -73,6 +77,23 @@ public class HelloController {
         System.out.println("details.getRemoteAddress() = " + details.getRemoteAddress());
         System.out.println("details.getSessionId() = " + details.getSessionId());
         return ((UserDetails) authentication.getPrincipal());
+    }
+
+    /**
+     * 修改认证信息
+     */
+    @PutMapping("/info")
+    @ResponseBody
+    public UserDetails updateInfo(Authentication authentication) {
+        // 更新信息
+        Member member = (Member) authentication.getPrincipal();
+        member.setVersion(member.getVersion() + 1);
+        // 生成新Token
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(member, authentication.getCredentials(), authentication.getAuthorities());
+        token.setDetails(authentication.getDetails());
+        // 放到Spring Security的上下文中，如果使用了spring session，也会自动刷新redis中数据
+        SecurityContextHolder.getContext().setAuthentication(token);
+        return member;
     }
 
     /**

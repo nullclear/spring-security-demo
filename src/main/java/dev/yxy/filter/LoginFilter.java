@@ -110,8 +110,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
             setDetails(request, authRequest);
             return this.getAuthenticationManager().authenticate(authRequest);
         } else {
-            // 检查验证码
-            checkCode(request.getParameter("captcha"), captcha);
+            // 检查验证码，KV结构这里暂时不验证了
+            //checkCode(request.getParameter("captcha"), captcha);
             return super.attemptAuthentication(request, response);
         }
     }

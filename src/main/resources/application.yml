@@ -1,0 +1,23 @@
+demo:
+  redis:
+    host: aliyun
+    port: 6379
+    database: 0
+    password: root
+    timeout: 10s
+    client-name: spring-security-demo
+    lettuce:
+      shutdown-timeout: 1s
+      pool:
+        max-active: 8
+        max-wait: 10s
+        max-idle: 4
+        min-idle: 0
+    session-database: 2
+spring:
+  session:
+    store-type: redis
+  data:
+    redis:
+      repositories:
+        enabled: false
