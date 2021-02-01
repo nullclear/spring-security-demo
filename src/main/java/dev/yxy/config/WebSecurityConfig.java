@@ -1,5 +1,6 @@
 package dev.yxy.config;
 
+import dev.yxy.details.CustomizeWebAuthenticationDetails;
 import dev.yxy.filter.CaptchaFilter;
 import dev.yxy.filter.LoginFilter;
 import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
@@ -24,16 +25,22 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.session.data.redis.RedisIndexedSessionRepository;
+import org.springframework.session.data.redis.config.annotation.web.http.RedisHttpSessionConfiguration;
+import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 
 import javax.sql.DataSource;
 import java.security.Principal;
 
 /**
+ * RedisIndexedSessionRepository 的bean 来自 {@link RedisHttpSessionConfiguration}
  * {@link SecurityContextPersistenceFilter} 这个过滤器用于readSecurityContextFromSession，至于spring session怎么从数据库里来，哪是另外的事
  * {@link SecurityContextPersistenceFilter} 会优先于{@link UsernamePasswordAuthenticationFilter}执行
  * Created by Nuclear on 2021/1/26
@@ -51,6 +58,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private DataSource dataSource;
+
+    @Autowired
+    private RedisIndexedSessionRepository sessionRepository;
 
     /**
      * remember-me持久化令牌，需要自己先建一个表
@@ -165,6 +175,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         //todo 记住我
         http.rememberMe().key("spring-security-demo").tokenValiditySeconds(AbstractRememberMeServices.TWO_WEEKS_S).tokenRepository(jdbcTokenRepository());
+
+        // todo 限制登录
+        springSessionManagement(http);
     }
 
     // 解决登录时验证码，方法一：加入前置过滤器
@@ -174,6 +187,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         //todo 配置登录逻辑
         http.formLogin()//表单登录
+                .authenticationDetailsSource(CustomizeWebAuthenticationDetails::new)// 自定义认证details的源
                 .loginPage("/auth")//登录页面 见dev.yxy.controller.HelloController.login()
                 .loginProcessingUrl("/login")//登录表单的action地址 可以自定义
                 //.defaultSuccessUrl("/")//登录成功后默认跳转的路径 见dev.yxy.controller.HelloController.index()
@@ -191,6 +205,26 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     public void branchReplaceFilter(HttpSecurity http) throws Exception {
         http.addFilterAt(new LoginFilter(authenticationManagerBean()), UsernamePasswordAuthenticationFilter.class);
     }
+
+    /**
+     * Session管理器的流程，这个用于spring-session
+     * 调用 {@link AbstractAuthenticationProcessingFilter}#doFilter() 方法中的sessionStrategy.onAuthentication(authResult, request, response);
+     * 其实例就是 {@link ConcurrentSessionControlAuthenticationStrategy}#onAuthentication() 方法
+     * This session has been expired (possibly due to multiple concurrent logins being attempted as the same user).
+     */
+    public void springSessionManagement(HttpSecurity http) throws Exception {
+        http.sessionManagement()
+                .sessionConcurrency(concurrencyControlConfigurer -> concurrencyControlConfigurer
+                        .sessionRegistry(new SpringSessionBackedSessionRegistry<>(sessionRepository))
+                        .maximumSessions(1)
+                        //.maxSessionsPreventsLogin(true)
+                        .expiredUrl("/auth?max-session=true"));
+    }
+
+    //@Bean
+    //HttpSessionEventPublisher httpSessionEventPublisher() {
+    //    return new HttpSessionEventPublisher();
+    //}
 
     // 手动判断用户权限
     public static boolean isAdmin(@Nullable Principal principal) {
