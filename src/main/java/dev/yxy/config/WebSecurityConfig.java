@@ -6,6 +6,7 @@ import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
 import dev.yxy.handler.CustomizeAuthenticationSuccessHandler;
 import dev.yxy.handler.CustomizeEntryPoint;
 import dev.yxy.handler.CustomizeLogoutSuccessHandler;
+import dev.yxy.provider.CustomizeAuthenticationProvider;
 import dev.yxy.service.UserService;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +25,17 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
+import javax.sql.DataSource;
 import java.security.Principal;
 
 /**
+ * {@link SecurityContextPersistenceFilter} 这个过滤器用于readSecurityContextFromSession，至于spring session怎么从数据库里来，哪是另外的事
+ * {@link SecurityContextPersistenceFilter} 会优先于{@link UsernamePasswordAuthenticationFilter}执行
  * Created by Nuclear on 2021/1/26
  */
 @EnableWebSecurity//开启spring security
@@ -42,7 +49,22 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private DataSource dataSource;
+
     /**
+     * remember-me持久化令牌，需要自己先建一个表
+     */
+    @Bean
+    JdbcTokenRepositoryImpl jdbcTokenRepository() {
+        JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
+        jdbcTokenRepository.setDataSource(dataSource);
+        return jdbcTokenRepository;
+    }
+
+    /**
+     * 假如下面不配置passwordEncoder(passwordEncoder())，这个配置为Bean也能有效
+     * 具体注入到哪儿了，暂时不知道，spring源码太复杂了
      * 加密类
      */
     @Bean
@@ -68,17 +90,24 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        // 内存用户
+        // todo 内存用户
         //auth.inMemoryAuthentication().withUser("jack").password("123456").roles("ADMIN")
         //        .and().withUser("rose").password("123456").roles("USER")
         //        .and().withUser("tony").password("123456").roles("VISITOR");
 
-        auth.userDetailsService(userService);
+        // todo 这个调用默认的DaoAuthenticationProvider
+        //auth.userDetailsService(userService).passwordEncoder(passwordEncoder());
+
+        // todo 自定义Provider 可以增强验证逻辑
+        CustomizeAuthenticationProvider provider = new CustomizeAuthenticationProvider();
+        provider.setUserDetailsService(userService);
+        provider.setPasswordEncoder(passwordEncoder());
+        auth.authenticationProvider(provider);
     }
 
     /**
      * 配置忽略的路径
-     * 请注意：
+     * todo 请注意：
      * 这里的忽略是真正的忽略，不只是放行
      * 假如将Controller里的映射路径配置到这里，请求会被直接无视
      * 只有作为静态资源的第一次请求才会被响应
@@ -115,8 +144,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .anyRequest().authenticated();//任何请求路径都需要认证
 
         //todo 处理验证码的两种方式
-        //branchFrontFilter(http);
-        branchReplaceFilter(http);
+        branchFrontFilter(http);
+        //branchReplaceFilter(http);
 
         //todo 配置登出逻辑
         http.logout()//登出
@@ -133,6 +162,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         //todo 关闭跨域请求 不然登不上
         http.csrf().disable();
+
+        //todo 记住我
+        http.rememberMe().key("spring-security-demo").tokenValiditySeconds(AbstractRememberMeServices.TWO_WEEKS_S).tokenRepository(jdbcTokenRepository());
     }
 
     // 解决登录时验证码，方法一：加入前置过滤器
@@ -153,6 +185,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .permitAll();//以上路径全放行
     }
 
+    // todo 警告，如果自己替换认证过滤器，会有些功能丢失，需要自己去实现，具体怎么做需要详细参考源码，非常麻烦，比如remember-me功能就会丢失
     // 解决登录时验证码，方法二：直接替换用户名密码认证过滤器，在自己重新的过滤器中处理验证码
     // 这种重写过滤器的方法自由度非常大，甚至可以换成json方式登录
     public void branchReplaceFilter(HttpSecurity http) throws Exception {
