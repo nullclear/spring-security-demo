@@ -8,6 +8,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.session.data.redis.config.annotation.SpringSessionRedisConnectionFactory;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 
@@ -48,5 +51,16 @@ public class RedisConfig {
     @Bean(name = "springSessionRedisConnectionFactory")
     public LettuceConnectionFactory springSessionRedisConnectionFactory() {
         return createLettuceConnectionFactory(redis.getSessionDatabase());
+    }
+
+    @Bean("sessionRedisOperations")
+    public RedisOperations<Object, Object> sessionRedisOperations(LettuceConnectionFactory springSessionRedisConnectionFactory) {
+        RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setConnectionFactory(springSessionRedisConnectionFactory);
+        redisTemplate.setKeySerializer(RedisSerializer.string());
+        redisTemplate.setValueSerializer(RedisSerializer.java());
+        redisTemplate.setHashKeySerializer(RedisSerializer.string());
+        redisTemplate.setHashValueSerializer(RedisSerializer.java());
+        return redisTemplate;
     }
 }

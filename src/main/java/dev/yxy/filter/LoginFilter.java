@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -49,11 +50,12 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private static final String httpMethod = "POST";
 
-
     /**
      * 当我们代替了 {@link UsernamePasswordAuthenticationFilter} 之后，
      * 原本在 {@link WebSecurityConfig} #configure(HttpSecurity http) 方法中关于 formLogin() 表单的配置就会失效，
      * 那些失效的属性，都可以在配置 LoginFilter 实例的时候配置。
+     * -----
+     * {@link AbstractAuthenticationFilterConfigurer}#configure() 参考此方法怎么注入缺失属性
      */
     public LoginFilter(AuthenticationManager authenticationManager) {
         // 登录表单的action地址 和 请求方式，这个/login不配置放行也没事

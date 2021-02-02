@@ -10,6 +10,7 @@ import org.springframework.util.Assert;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -135,6 +136,19 @@ public class Member implements UserDetails, CredentialsContainer {
     @Override
     public void eraseCredentials() {
         password = null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Member)) return false;
+        Member member = (Member) o;
+        return Objects.equals(getUsername(), member.getUsername());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getUsername());
     }
 
     @Override

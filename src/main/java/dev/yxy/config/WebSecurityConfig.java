@@ -7,11 +7,15 @@ import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
 import dev.yxy.handler.CustomizeAuthenticationSuccessHandler;
 import dev.yxy.handler.CustomizeEntryPoint;
 import dev.yxy.handler.CustomizeLogoutSuccessHandler;
+import dev.yxy.model.Member;
 import dev.yxy.provider.CustomizeAuthenticationProvider;
 import dev.yxy.service.UserService;
+import dev.yxy.strategy.CustomizeSessionInformationExpiredStrategy;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
@@ -22,7 +26,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
@@ -31,10 +37,14 @@ import org.springframework.security.web.authentication.rememberme.AbstractRememb
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextPersistenceFilter;
+import org.springframework.security.web.session.ConcurrentSessionFilter;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.security.web.session.SimpleRedirectSessionInformationExpiredStrategy;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.session.data.redis.config.annotation.web.http.RedisHttpSessionConfiguration;
 import org.springframework.session.security.SpringSessionBackedSessionRegistry;
+import org.springframework.session.web.http.SessionEventHttpSessionListenerAdapter;
 
 import javax.sql.DataSource;
 import java.security.Principal;
@@ -43,6 +53,8 @@ import java.security.Principal;
  * RedisIndexedSessionRepository 的bean 来自 {@link RedisHttpSessionConfiguration}
  * {@link SecurityContextPersistenceFilter} 这个过滤器用于readSecurityContextFromSession，至于spring session怎么从数据库里来，哪是另外的事
  * {@link SecurityContextPersistenceFilter} 会优先于{@link UsernamePasswordAuthenticationFilter}执行
+ * ----
+ * {@link AbstractAuthenticationFilterConfigurer}#configure() 配置了一些未自定义的属性
  * Created by Nuclear on 2021/1/26
  */
 @EnableWebSecurity//开启spring security
@@ -60,7 +72,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     private DataSource dataSource;
 
     @Autowired
-    private RedisIndexedSessionRepository sessionRepository;
+    private RedisOperations<Object, Object> sessionRedisOperations;
 
     /**
      * remember-me持久化令牌，需要自己先建一个表
@@ -207,24 +219,62 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     /**
-     * Session管理器的流程，这个用于spring-session
+     * Session管理器
+     * -----
+     * 何时调用？
      * 调用 {@link AbstractAuthenticationProcessingFilter}#doFilter() 方法中的sessionStrategy.onAuthentication(authResult, request, response);
      * 其实例就是 {@link ConcurrentSessionControlAuthenticationStrategy}#onAuthentication() 方法
-     * This session has been expired (possibly due to multiple concurrent logins being attempted as the same user).
+     * -----
+     * maxSessionsPreventsLogin(true)这么设置会有一个巨大的问题，假如用户没有注销，那就没人能登录上去了
+     * -----
+     * 默认的session过期策略是 {@link ConcurrentSessionFilter}#ResponseBodySessionInformationExpiredStrategy
+     * 直接输出的This session has been expired (possibly due to multiple concurrent logins being attempted as the same user).就来源于此
+     * -----
+     * 如果自定义了expiredUrl("/auth?max-session=true")，session过期策略就变了，其实例在{@link SimpleRedirectSessionInformationExpiredStrategy}
      */
-    public void springSessionManagement(HttpSecurity http) throws Exception {
-        http.sessionManagement()
-                .sessionConcurrency(concurrencyControlConfigurer -> concurrencyControlConfigurer
-                        .sessionRegistry(new SpringSessionBackedSessionRegistry<>(sessionRepository))
-                        .maximumSessions(1)
-                        //.maxSessionsPreventsLogin(true)
-                        .expiredUrl("/auth?max-session=true"));
+    public void sessionManagement(HttpSecurity http) throws Exception {
+        http.sessionManagement().maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
+                .expiredUrl("/auth?max-session=true");
     }
 
-    //@Bean
-    //HttpSessionEventPublisher httpSessionEventPublisher() {
-    //    return new HttpSessionEventPublisher();
-    //}
+    /**
+     * Session管理器，这个用于spring-session
+     * -----
+     * 默认的sessionRegistry是 {@link SessionRegistryImpl} ，如果需要使用spring-session，需要另外设置
+     * {@link SessionRegistryImpl} 有一个坑，里面的Map是用Principal做key的，所以我们的 {@link Member} 需要实现equals和hashcode
+     * -----
+     * 可以自定义session过期策略
+     * -----
+     * 可以使用.sessionAuthenticationStrategy()自定义session认证策略，参考{@link ConcurrentSessionControlAuthenticationStrategy}
+     */
+    public void springSessionManagement(HttpSecurity http) throws Exception {
+        http.sessionManagement().maximumSessions(1)
+                .sessionRegistry(new SpringSessionBackedSessionRegistry<>(new RedisIndexedSessionRepository(sessionRedisOperations)))
+                .maxSessionsPreventsLogin(false)
+                .expiredSessionStrategy(new CustomizeSessionInformationExpiredStrategy("/auth?max-session=true"));
+    }
+
+    /**
+     * 这个Bean会被 {@link SessionEventHttpSessionListenerAdapter}#onApplicationEvent() 调用，到底怎么进去的，可能是由spring内部管理的
+     * -----
+     * 这个类实现了 HttpSessionListener 接口，在该 Bean 中，可以及时感知 session 创建和销毁的事件，
+     * 并且调用 Spring 中的事件机制将相关的创建和销毁事件发布出去，进而被 Spring Security 感知到
+     * -----
+     * 不过即使没有bean，据我的测试也没有啥问题，不懂原因在哪
+     * -----
+     * 创建了这个Bean，还会出现 RedisConnectionFactory is required 的问题
+     * {@link RedisConfig}#sessionRedisOperations 就是为了解决这个问题
+     * 直接替换 {@link RedisIndexedSessionRepository} 里需要的 sessionRedisOperations
+     * -----
+     * 还有必须注意 {@link RedisIndexedSessionRepository} 里的defaultSerializer 是 {@link JdkSerializationRedisSerializer}
+     * 这个关系着 {@link RedisIndexedSessionRepository}#onMessage() 里的反序列化
+     * 所以{@link RedisConfig}#sessionRedisOperations 里的value序列化只能是 {@link JdkSerializationRedisSerializer}
+     */
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
+    }
 
     // 手动判断用户权限
     public static boolean isAdmin(@Nullable Principal principal) {
