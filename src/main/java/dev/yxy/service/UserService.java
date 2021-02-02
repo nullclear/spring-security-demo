@@ -9,9 +9,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.Session;
+import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+
+import static org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME;
 
 /**
  * Created by Nuclear on 2021/1/27
@@ -22,6 +27,9 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RedisIndexedSessionRepository redisIndexedSessionRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -48,5 +56,9 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException("不存在的用户");
         }
         return userDetails;
+    }
+
+    public Map<String, ? extends Session> findByIndexNameAndIndexValue(String username) {
+        return redisIndexedSessionRepository.findByIndexNameAndIndexValue(PRINCIPAL_NAME_INDEX_NAME, username);
     }
 }

@@ -14,7 +14,6 @@ import dev.yxy.strategy.CustomizeSessionInformationExpiredStrategy;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
@@ -72,7 +71,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     private DataSource dataSource;
 
     @Autowired
-    private RedisOperations<Object, Object> sessionRedisOperations;
+    private RedisIndexedSessionRepository redisIndexedSessionRepository;
 
     /**
      * remember-me持久化令牌，需要自己先建一个表
@@ -250,7 +249,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      */
     public void springSessionManagement(HttpSecurity http) throws Exception {
         http.sessionManagement().maximumSessions(1)
-                .sessionRegistry(new SpringSessionBackedSessionRegistry<>(new RedisIndexedSessionRepository(sessionRedisOperations)))
+                .sessionRegistry(new SpringSessionBackedSessionRegistry<>(redisIndexedSessionRepository))
                 .maxSessionsPreventsLogin(false)
                 .expiredSessionStrategy(new CustomizeSessionInformationExpiredStrategy("/auth?max-session=true"));
     }

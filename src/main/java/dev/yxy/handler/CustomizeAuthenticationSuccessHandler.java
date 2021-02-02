@@ -25,6 +25,9 @@ public class CustomizeAuthenticationSuccessHandler extends SavedRequestAwareAuth
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        //把登录者的IP放到session中
+        request.getSession().setAttribute("remoteAddress", request.getRemoteAddr());
+
         //如果是移动设备，就返回Json数据，如果不是移动设备，就调用父类的逻辑
         if ("Mobile".equalsIgnoreCase(request.getHeader("X-Type"))) {
             response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
