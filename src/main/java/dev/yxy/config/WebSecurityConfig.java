@@ -45,7 +45,6 @@ import org.springframework.session.data.redis.config.annotation.web.http.RedisHt
 import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 import org.springframework.session.web.http.SessionEventHttpSessionListenerAdapter;
 
-import javax.sql.DataSource;
 import java.security.Principal;
 
 /**
@@ -54,6 +53,8 @@ import java.security.Principal;
  * {@link SecurityContextPersistenceFilter} 会优先于{@link UsernamePasswordAuthenticationFilter}执行
  * ----
  * {@link AbstractAuthenticationFilterConfigurer}#configure() 配置了一些未自定义的属性
+ * ----
+ * 先转载完Bean才调用配置方法?(大概)，有些没必要写成Bean
  * Created by Nuclear on 2021/1/26
  */
 @EnableWebSecurity//开启spring security
@@ -68,20 +69,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     private UserService userService;
 
     @Autowired
-    private DataSource dataSource;
-
-    @Autowired
     private RedisIndexedSessionRepository redisIndexedSessionRepository;
 
-    /**
-     * remember-me持久化令牌，需要自己先建一个表
-     */
-    @Bean
-    JdbcTokenRepositoryImpl jdbcTokenRepository() {
-        JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
-        jdbcTokenRepository.setDataSource(dataSource);
-        return jdbcTokenRepository;
-    }
+    @Autowired
+    private JdbcTokenRepositoryImpl jdbcTokenRepository;
 
     /**
      * 假如下面不配置passwordEncoder(passwordEncoder())，这个配置为Bean也能有效
@@ -117,7 +108,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         //        .and().withUser("tony").password("123456").roles("VISITOR");
 
         // todo 这个调用默认的DaoAuthenticationProvider
-        //auth.userDetailsService(userService).passwordEncoder(passwordEncoder());
+        // todo 这个不能去掉，因为如果使用remember-me的话，这个是必要的来自 WebSecurityConfigurerAdapter 的内部类 UserDetailsServiceDelegator
+        auth.userDetailsService(userService);
 
         // todo 自定义Provider 可以增强验证逻辑
         CustomizeAuthenticationProvider provider = new CustomizeAuthenticationProvider();
@@ -185,7 +177,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http.csrf().disable();
 
         //todo 记住我
-        http.rememberMe().key("spring-security-demo").tokenValiditySeconds(AbstractRememberMeServices.TWO_WEEKS_S).tokenRepository(jdbcTokenRepository());
+        http.rememberMe().key("spring-security-demo").tokenValiditySeconds(AbstractRememberMeServices.TWO_WEEKS_S).tokenRepository(jdbcTokenRepository);
 
         // todo 限制登录
         springSessionManagement(http);
@@ -246,9 +238,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      * 可以自定义session过期策略
      * -----
      * 可以使用.sessionAuthenticationStrategy()自定义session认证策略，参考{@link ConcurrentSessionControlAuthenticationStrategy}
+     * 比如我设置禁止后续登录，但是我前置的Session又没有注销，那关闭窗口后就没人能登上了，自定义也是可以解决的
      */
     public void springSessionManagement(HttpSecurity http) throws Exception {
-        http.sessionManagement().maximumSessions(1)
+        http.sessionManagement().maximumSessions(2)
                 .sessionRegistry(new SpringSessionBackedSessionRegistry<>(redisIndexedSessionRepository))
                 .maxSessionsPreventsLogin(false)
                 .expiredSessionStrategy(new CustomizeSessionInformationExpiredStrategy("/auth?max-session=true"));

@@ -15,6 +15,10 @@ import javax.servlet.http.HttpServletRequest;
 public class CustomizeWebAuthenticationDetails extends WebAuthenticationDetails {
     private static final Logger logger = LoggerFactory.getLogger(CustomizeWebAuthenticationDetails.class);
 
+    /**
+     * todo
+     * 父类 {@link WebAuthenticationDetails}里sessionId 可能是null，所以用这个获取SessionId是不对的
+     */
     public CustomizeWebAuthenticationDetails(HttpServletRequest request) {
         super(request);
         String requestCode = request.getParameter("captcha");

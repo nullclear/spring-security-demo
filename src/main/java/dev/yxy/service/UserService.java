@@ -9,12 +9,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.session.Session;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME;
 
@@ -30,6 +32,9 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private RedisIndexedSessionRepository redisIndexedSessionRepository;
+
+    @Autowired
+    private JdbcTokenRepositoryImpl jdbcTokenRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -60,5 +65,19 @@ public class UserService implements UserDetailsService {
 
     public Map<String, ? extends Session> findByIndexNameAndIndexValue(String username) {
         return redisIndexedSessionRepository.findByIndexNameAndIndexValue(PRINCIPAL_NAME_INDEX_NAME, username);
+    }
+
+    public int deleteOther(String id, String username) throws Exception {
+        int count = 0;
+        Map<String, ? extends Session> map = redisIndexedSessionRepository.findByIndexNameAndIndexValue(PRINCIPAL_NAME_INDEX_NAME, username);
+        for (String sessionId : map.keySet()) {
+            if (!Objects.equals(sessionId, id)) {
+                redisIndexedSessionRepository.deleteById(sessionId);
+                count++;
+            }
+        }
+        // 可能还存在remember-me的用户，这个不删除等会还能登录
+        jdbcTokenRepository.removeUserTokens(username);
+        return count;
     }
 }
