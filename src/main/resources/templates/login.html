@@ -41,6 +41,16 @@
             </form>
         </div>
     </div>
+    <div class="row">
+        <div class="col-md-4 col-md-offset-4">
+            <hr/>
+            <h5>不加随机数请求，后端响应需要设置Cache-Control</h5>
+            <img src="/no-cache" onclick="this.src='/no-cache'" alt="no-cache"/>
+            <hr/>
+            <h5>加随机数请求，这样浏览器就不会认为是缓存资源</h5>
+            <img src="/random" onclick="this.src='/random?time='+new Date().getTime()" alt="random"/>
+        </div>
+    </div>
 </div>
 </body>
 </html>

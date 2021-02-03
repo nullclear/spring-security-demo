@@ -26,3 +26,5 @@ spring:
     url: jdbc:mysql://aliyun:3306/demo?characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: root
+  thymeleaf:
+    cache: false

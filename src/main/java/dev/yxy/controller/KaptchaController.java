@@ -4,6 +4,10 @@ import com.google.code.kaptcha.impl.DefaultKaptcha;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -12,6 +16,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
@@ -49,10 +54,40 @@ public class KaptchaController {
         //根据code生成图片
         BufferedImage image = defaultKaptcha.createImage(code);
         try {
+            response.setContentType(MediaType.IMAGE_JPEG_VALUE);
             //在响应中写入图片
-            ImageIO.write(image, "jpg", response.getOutputStream());
+            ImageIO.write(image, "jpeg", response.getOutputStream());
         } catch (IOException e) {
             logger.error("验证码图片写入错误", e);
+        }
+    }
+
+    //缓存控制，解决浏览器无法二次请求的问题
+    @GetMapping("/no-cache")
+    public void getNoCache(HttpServletResponse response) {
+        BufferedImage image = defaultKaptcha.createImage("cache");
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        try {
+            response.setHeader("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
+            response.setContentType(MediaType.IMAGE_JPEG_VALUE);
+            ImageIO.write(image, "jpeg", response.getOutputStream());
+        } catch (IOException e) {
+            logger.error("图片写入错误", e);
+        }
+    }
+
+    //随机数，即使原来的请求被缓存了，但是新请求加了随机数，不会被认为是缓存资源
+    @GetMapping("/random")
+    public ResponseEntity<byte[]> getRandom() {
+        BufferedImage image = defaultKaptcha.createImage("random");
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        try {
+            ImageIO.write(image, "jpeg", os);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG);
+            return new ResponseEntity<>(os.toByteArray(), headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return null;
         }
     }
 

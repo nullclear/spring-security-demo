@@ -1,5 +1,6 @@
 package dev.yxy.config;
 
+import dev.yxy.controller.KaptchaController;
 import dev.yxy.details.CustomizeWebAuthenticationDetails;
 import dev.yxy.filter.CaptchaFilter;
 import dev.yxy.filter.LoginFilter;
@@ -125,12 +126,14 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      * 假如将Controller里的映射路径配置到这里，请求会被直接无视
      * 只有作为静态资源的第一次请求才会被响应
      * 参考验证码前端生成的图片的src
+     * -----
+     * 经过查证，是浏览器缓存的原因，解决办法见{@link KaptchaController}里的两个方法
      */
     @Override
     public void configure(WebSecurity web) throws Exception {
         // Spring Security should completely ignore URLs starting with /external/
         // 通过访问 /external/index.html 来进行测试
-        web.ignoring().antMatchers("/external/**", "/js/**", "/favicon.ico");
+        web.ignoring().antMatchers("/external/**", "/js/**", "/favicon.ico", "/no-cache", "/random");
     }
 
     /**
