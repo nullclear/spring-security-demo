@@ -12,9 +12,12 @@ import org.springframework.data.redis.connection.lettuce.LettucePoolingClientCon
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.session.config.annotation.web.http.SpringHttpSessionConfiguration;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 import org.springframework.session.data.redis.config.annotation.SpringSessionRedisConnectionFactory;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
 
 @Configuration
 @EnableRedisHttpSession//开启spring session
@@ -70,5 +73,16 @@ public class RedisConfig {
     @Primary
     public RedisIndexedSessionRepository redisIndexedSessionRepository(RedisOperations<Object, Object> sessionRedisOperations) {
         return new RedisIndexedSessionRepository(sessionRedisOperations);
+    }
+
+    /**
+     * 注入到了 {@link SpringHttpSessionConfiguration}
+     * 可以设置spring-session返回的Cookie的各种属性
+     */
+    @Bean
+    public CookieSerializer cookieSerializer() {
+        DefaultCookieSerializer defaultCookieSerializer = new DefaultCookieSerializer();
+        defaultCookieSerializer.setCookieName("SPRING_SESSION");
+        return defaultCookieSerializer;
     }
 }
