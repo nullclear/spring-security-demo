@@ -23,6 +23,7 @@ import javax.servlet.http.HttpSession;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by Nuclear on 2021/2/2
@@ -67,7 +68,7 @@ public class UserController {
      */
     @GetMapping("/session")
     @ResponseBody
-    public HashMap<String, HashMap<String, Object>> findRemoteAddressByUsername() {
+    public HashMap<String, HashMap<String, Object>> findRemoteAddressByUsername(HttpSession httpSession) {
         //获取认证信息
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Member member = (Member) authentication.getPrincipal();
@@ -76,6 +77,11 @@ public class UserController {
         HashMap<String, HashMap<String, Object>> hashMap = new HashMap<>();
         for (Session session : map.values()) {
             HashMap<String, Object> content = new HashMap<>();
+            if (Objects.equals(httpSession.getId(), session.getId())) {
+                content.put("isMyself", true);
+            } else {
+                content.put("isMyself", false);
+            }
             content.put("id", session.getId());
             content.put("creationTime", session.getCreationTime());
             content.put("lastAccessedTime", session.getLastAccessedTime());

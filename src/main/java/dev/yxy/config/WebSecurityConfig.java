@@ -35,6 +35,8 @@ import org.springframework.security.web.authentication.AbstractAuthenticationPro
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.security.web.session.ConcurrentSessionFilter;
@@ -145,6 +147,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      * defaultSuccessUrl看源码可以发现，会记忆认证前的请求路径，比如你在/Hello路径下被拦截需要认证，认证后路径跳转到/Hello，页面显示/的内容
      * 当然，如果采用defaultSuccessUrl("/", true)这个方法，效果和successForwardUrl基本上一致
      * -----
+     * 如果配置了.tokenRepository(jdbcTokenRepository) 就使用 {@link PersistentTokenBasedRememberMeServices}
+     * 没有配置就使用 {@link TokenBasedRememberMeServices}
      * <p>
      * 配置路径认证
      */
@@ -180,7 +184,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http.csrf().disable();
 
         //todo 记住我
-        http.rememberMe().key("spring-security-demo").tokenValiditySeconds(AbstractRememberMeServices.TWO_WEEKS_S).tokenRepository(jdbcTokenRepository);
+        http.rememberMe().key("spring-security-demo")
+                //.userDetailsService(userService) //remember-me是需要使用loadUserByUsername()这个方法的，这里不配置就使用上面的配置，这里配置了就顶替上面的配置
+                //说到这个，remember-me里面还能配置authenticationSuccessHandler，logoutHandler
+                .tokenValiditySeconds(AbstractRememberMeServices.TWO_WEEKS_S)//客户端token过期时间
+                .tokenRepository(jdbcTokenRepository);//remember-me的token仓库，可以存在内存，也可以存在数据库
 
         // todo 限制登录
         springSessionManagement(http);
