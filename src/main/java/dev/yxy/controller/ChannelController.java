@@ -1,6 +1,7 @@
 package dev.yxy.controller;
 
 import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.access.vote.AuthenticatedVoter;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +37,7 @@ public class ChannelController {
     }
 
     /**
+     * 具体请看{@link AuthenticatedVoter}
      * 任何人都能访问，不管有没有登录，有没有权限
      */
     @Secured("IS_AUTHENTICATED_ANONYMOUSLY")

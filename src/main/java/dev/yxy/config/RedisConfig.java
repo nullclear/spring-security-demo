@@ -51,13 +51,18 @@ public class RedisConfig {
         return new LettuceConnectionFactory(standaloneConfig, lettuceConfig);
     }
 
-    //springSession使用的数据库连接工厂
+    /**
+     * 1、springSession使用的数据库连接工厂
+     */
     @SpringSessionRedisConnectionFactory
     @Bean(name = "springSessionRedisConnectionFactory")
     public LettuceConnectionFactory springSessionRedisConnectionFactory() {
         return createLettuceConnectionFactory(redis.getSessionDatabase());
     }
 
+    /**
+     * 2、spring-session持久化redis操作对象
+     */
     @Bean("sessionRedisOperations")
     public RedisOperations<Object, Object> sessionRedisOperations(LettuceConnectionFactory springSessionRedisConnectionFactory) {
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
@@ -69,6 +74,9 @@ public class RedisConfig {
         return redisTemplate;
     }
 
+    /**
+     * 3、spring-session持久化redis仓库
+     */
     @Bean("redisIndexedSessionRepository")
     @Primary
     public RedisIndexedSessionRepository redisIndexedSessionRepository(RedisOperations<Object, Object> sessionRedisOperations) {

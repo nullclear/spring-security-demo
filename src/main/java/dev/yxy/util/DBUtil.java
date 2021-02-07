@@ -14,22 +14,22 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DBUtil {
 
-    private static ConcurrentHashMap<String, List<String>> table = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, List<String>> table = new ConcurrentHashMap<>();
 
-    private static ConcurrentHashMap<String, UserDetails> document = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, UserDetails> document = new ConcurrentHashMap<>();
 
-    private static BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     static {
         table.put("jack", List.of("jack", "123456", "ADMIN"));
         table.put("rose", List.of("rose", "123456", "USER"));
         table.put("tony", List.of("tony", "123456", "VISITOR"));
 
-        document.put("jack", Member.builder().username("jack").password("123456").roles("ADMIN,USER").passwordEncoder(s -> passwordEncoder.encode(s)).build());
-        document.put("rose", Member.builder().username("rose").password("123456").roles("USER").passwordEncoder(s -> passwordEncoder.encode(s)).build());
-        document.put("tony", Member.builder().username("tony").password("123456").roles("VISITOR").passwordEncoder(s -> passwordEncoder.encode(s)).build());
-        document.put("mike", Member.builder().username("mike").password("123456").roles("ADMIN").passwordEncoder(s -> passwordEncoder.encode(s)).build());
-        document.put("tom", Member.builder().username("tom").password("123456").roles("USER").accountLocked(true).passwordEncoder(s -> passwordEncoder.encode(s)).build());
+        document.put("jack", Member.builder().username("jack").password("123456").roles("ADMIN,USER").passwordEncoder(passwordEncoder::encode).build());
+        document.put("rose", Member.builder().username("rose").password("123456").roles("USER").passwordEncoder(passwordEncoder::encode).build());
+        document.put("tony", Member.builder().username("tony").password("123456").roles("VISITOR").passwordEncoder(passwordEncoder::encode).build());
+        document.put("mike", Member.builder().username("mike").password("123456").roles("ADMIN").passwordEncoder(passwordEncoder::encode).build());
+        document.put("tom", Member.builder().username("tom").password("123456").roles("USER").accountLocked(true).passwordEncoder(passwordEncoder::encode).build());
     }
 
     @Nullable

@@ -57,7 +57,7 @@ import java.security.Principal;
  * ----
  * {@link AbstractAuthenticationFilterConfigurer}#configure() 配置了一些未自定义的属性
  * ----
- * 先转载完Bean才调用配置方法?(大概)，有些没必要写成Bean
+ * 先装载完Bean才调用配置方法?(大概)，有些没必要写成Bean
  * Created by Nuclear on 2021/1/26
  */
 @EnableWebSecurity//开启spring security
@@ -111,7 +111,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         //        .and().withUser("tony").password("123456").roles("VISITOR");
 
         // todo 这个调用默认的DaoAuthenticationProvider
-        // todo 这个不能去掉，因为如果使用remember-me的话，这个是必要的来自 WebSecurityConfigurerAdapter 的内部类 UserDetailsServiceDelegator
+        // todo 这个不能去掉，因为如果使用remember-me的话，这个是必要的，remember-me的userDetailsService来自 WebSecurityConfigurerAdapter 的内部类 UserDetailsServiceDelegator
+        // todo 这个配置的相当于全局的userDetailsService，哪里缺少都会来这里拿
         auth.userDetailsService(userService);
 
         // todo 自定义Provider 可以增强验证逻辑
