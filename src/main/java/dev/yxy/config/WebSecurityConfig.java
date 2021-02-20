@@ -4,10 +4,7 @@ import dev.yxy.controller.KaptchaController;
 import dev.yxy.details.CustomizeWebAuthenticationDetails;
 import dev.yxy.filter.CaptchaFilter;
 import dev.yxy.filter.LoginFilter;
-import dev.yxy.handler.CustomizeAuthenticationFailureHandler;
-import dev.yxy.handler.CustomizeAuthenticationSuccessHandler;
-import dev.yxy.handler.CustomizeEntryPoint;
-import dev.yxy.handler.CustomizeLogoutSuccessHandler;
+import dev.yxy.handler.*;
 import dev.yxy.model.Member;
 import dev.yxy.provider.CustomizeAuthenticationProvider;
 import dev.yxy.service.UserService;
@@ -17,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,11 +25,16 @@ import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.access.AccessDeniedHandlerImpl;
+import org.springframework.security.web.access.ExceptionTranslationFilter;
+import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
@@ -178,13 +181,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .clearAuthentication(true)//清除认证信息，默认就是true
                 .invalidateHttpSession(true);//使Session无效化，默认就是true
 
-        //todo 配置未认证处理方案
-        http.exceptionHandling().authenticationEntryPoint(new CustomizeEntryPoint("/auth"));//配置了这个 loginPage("/auth") 其实可以去掉，不过放着也没事 会被覆盖
+        //todo 配置未认证处理方案和权限拒绝处理方案
+        exceptionHandling(http);
 
         //todo 关闭跨域请求 不然登不上
         http.csrf().disable();
 
-        //todo 记住我
+        //todo 记住我 最好重写下UserDetails实现类的hashCode和equals 有地方好像用到了
         http.rememberMe().key("spring-security-demo")
                 //.userDetailsService(userService) //remember-me是需要使用loadUserByUsername()这个方法的，这里不配置就使用上面的配置，这里配置了就顶替上面的配置
                 //说到这个，remember-me里面还能配置authenticationSuccessHandler，logoutHandler
@@ -239,6 +242,25 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http.sessionManagement().maximumSessions(1)
                 .maxSessionsPreventsLogin(false)
                 .expiredUrl("/auth?max-session=true");
+    }
+
+    /**
+     * 处理spring security的异常
+     * ----
+     * Spring Security 中的异常可以分为两大类，一种是{@link AuthenticationException 认证异常}，一种是{@link AccessDeniedException 授权异常}。
+     * ----
+     * {@link ExceptionTranslationFilter} 是专门用来处理 filter chain 中这两种异常的，其处于 Spring Security 过滤器链的倒数第二个，
+     * filter chain 中最后一个 {@link FilterSecurityInterceptor} 专门处理授权问题，在处理授权问题时，就会发现用户未登录、未授权等，进而抛出异常，抛出的异常会被
+     * {@link ExceptionTranslationFilter}#doFilter方法捕获，在#handleSpringSecurityException方法中判断类型，使用默认的处理器进行处理。
+     * ----
+     * {@link LoginUrlAuthenticationEntryPoint} 是默认的 {@link AuthenticationException 认证异常} 处理器
+     * {@link AccessDeniedHandlerImpl} 是默认的 {@link AccessDeniedException 授权异常} 处理器
+     * 我们可以在参考这两个处理器自定义处理逻辑
+     */
+    public void exceptionHandling(HttpSecurity http) throws Exception {
+        http.exceptionHandling()
+                .authenticationEntryPoint(new CustomizeEntryPoint("/auth"))// formLogin().loginPage("/auth")方法内setLoginPage(loginPage)配置了默认的authenticationEntryPoint
+                .accessDeniedHandler(new CustomizeAccessDeniedHandler());// 授权异常处理器
     }
 
     /**
