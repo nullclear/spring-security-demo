@@ -1,9 +1,9 @@
 demo:
   redis:
     host: aliyun
-    port: 6379
+    port: 6380
     database: 0
-    password: root
+    password: root_redis
     timeout: 10s
     client-name: spring-security-demo
     lettuce:
@@ -23,8 +23,8 @@ spring:
         enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://aliyun:3306/demo?characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
+    url: jdbc:mysql://aliyun:3307/demo?characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
-    password: root
+    password: root_mysql
   thymeleaf:
     cache: false

@@ -21,7 +21,7 @@ public class CustomizeAccessDeniedHandler extends AccessDeniedHandlerImpl {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
         //如果是移动设备，就返回Json数据，如果不是移动设备，就调用父类的逻辑
-        if ("Mobile".equalsIgnoreCase(request.getHeader("X-Type"))) {
+        if ("Mobile".equalsIgnoreCase(request.getHeader("X-Type")) || "PUT".equalsIgnoreCase(request.getMethod())) {
             response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
             response.setStatus(HttpStatus.FORBIDDEN.value());
             PrintWriter out = response.getWriter();

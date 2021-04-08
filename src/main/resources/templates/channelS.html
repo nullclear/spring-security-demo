@@ -30,6 +30,8 @@
 <button id="common_channel">管理员和用户通道</button>
 <br/><br/>
 <button id="anon_channel">匿名通道</button>
+<br/><br/>
+<button id="update_channel">更新通道</button>
 <hr/>
 
 <h3>回调信息</h3>
@@ -95,7 +97,7 @@
 
     //管理员和用户通道
     $("#common_channel").click(function () {
-        console.log("----admin_channel----");
+        console.log("----common_channel----");
         $.ajax({
             url: "/channelS/common",
             type: "GET",
@@ -122,10 +124,41 @@
 
     //匿名通道
     $("#anon_channel").click(function () {
-        console.log("----admin_channel----");
+        console.log("----anon_channel----");
         $.ajax({
             url: "/channelS/anon",
             type: "GET",
+            success: function (data, textStatus) {
+                console.log("----data----");
+                console.log(data);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                $("#msg").text(data);
+                $("#status").text(textStatus);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                console.log("----XMLHttpRequest----");
+                console.log(XMLHttpRequest);
+                console.log("----textStatus----");
+                console.log(textStatus);
+                console.log("----errorThrown----");
+                console.log(errorThrown);
+                $("#msg").text(XMLHttpRequest.responseText);
+                $("#status").text(textStatus);
+            }
+        });
+    });
+
+    //更新通道
+    $("#update_channel").click(function () {
+        console.log("----update_channel----");
+        let obj = {"username": "jack"};
+        $.ajax({
+            url: "/channelS/update",
+            type: "PUT",
+            contentType: "application/json",
+            data: JSON.stringify(obj),
+            dataType: "text",
             success: function (data, textStatus) {
                 console.log("----data----");
                 console.log(data);
