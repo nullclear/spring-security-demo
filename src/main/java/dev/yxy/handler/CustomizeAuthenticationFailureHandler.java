@@ -12,7 +12,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
 
 /**
  * 自定义认证失败处理器
@@ -50,7 +49,7 @@ public class CustomizeAuthenticationFailureHandler extends SimpleUrlAuthenticati
             out.close();
         } else {
             // todo 失败网页的跳转结果 可以在这里改
-            super.setDefaultFailureUrl("/auth?error=true&msg=" + URLEncoder.encode(exception.getMessage(), Charset.defaultCharset()));
+            super.setDefaultFailureUrl("/auth?error=true&msg=" + URLEncoder.encode(exception.getMessage(), "UTF-8"));
             super.onAuthenticationFailure(request, response, exception);
         }
     }

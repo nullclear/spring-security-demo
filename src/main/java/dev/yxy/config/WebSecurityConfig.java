@@ -27,6 +27,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,6 +42,8 @@ import org.springframework.security.web.authentication.rememberme.JdbcTokenRepos
 import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy;
+import org.springframework.security.web.context.HttpRequestResponseHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.security.web.session.ConcurrentSessionFilter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
@@ -51,10 +54,16 @@ import org.springframework.session.data.redis.config.annotation.web.http.RedisHt
 import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 import org.springframework.session.web.http.SessionEventHttpSessionListenerAdapter;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.security.Principal;
 
 /**
- * RedisIndexedSessionRepository 的bean 来自 {@link RedisHttpSessionConfiguration}
+ * {@link SecurityContextPersistenceFilter#doFilter} 100行
+ * {@link HttpSessionSecurityContextRepository#loadContext(HttpRequestResponseHolder)}
+ * {@link HttpSessionSecurityContextRepository#saveContext(SecurityContext, HttpServletRequest, HttpServletResponse)}
+ * -------------------------------------------------- 分割线 --------------------------------------------------
+ * RedisIndexedSessionRepository 原生的 bean 来自 {@link RedisHttpSessionConfiguration}
  * {@link SecurityContextPersistenceFilter} 这个过滤器用于readSecurityContextFromSession，至于spring session怎么从数据库里来，哪是另外的事
  * {@link SecurityContextPersistenceFilter} 会优先于{@link UsernamePasswordAuthenticationFilter}执行
  * ----
@@ -290,12 +299,12 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      * 不过即使没有bean，据我的测试也没有啥问题，不懂原因在哪
      * -----
      * 创建了这个Bean，还会出现 RedisConnectionFactory is required 的问题
-     * {@link RedisConfig}#sessionRedisOperations 就是为了解决这个问题
+     * {@link RedisHttpSessionConfig}#sessionRedisOperations 就是为了解决这个问题
      * 直接替换 {@link RedisIndexedSessionRepository} 里需要的 sessionRedisOperations
      * -----
      * 还有必须注意 {@link RedisIndexedSessionRepository} 里的defaultSerializer 是 {@link JdkSerializationRedisSerializer}
      * 这个关系着 {@link RedisIndexedSessionRepository}#onMessage() 里的反序列化
-     * 所以{@link RedisConfig}#sessionRedisOperations 里的value序列化只能是 {@link JdkSerializationRedisSerializer}
+     * 所以{@link RedisHttpSessionConfig}#sessionRedisOperations 里的value序列化只能是 {@link JdkSerializationRedisSerializer}
      */
     @Bean
     public HttpSessionEventPublisher httpSessionEventPublisher() {

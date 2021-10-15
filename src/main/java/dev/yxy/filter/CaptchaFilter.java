@@ -12,7 +12,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 自定义验证码过滤器
@@ -43,7 +43,7 @@ public class CaptchaFilter extends GenericFilter {
                 //----  模拟Cookie-redis取验证码操作 /start ----
                 //todo 从redis中根据 key=PREFIX:token 去取code 然后下面比对逻辑一致了
                 String token;
-                for (Cookie cookie : Objects.requireNonNullElse(request.getCookies(), new Cookie[0])) {
+                for (Cookie cookie : Optional.ofNullable(request.getCookies()).orElse(new Cookie[0])) {
                     if ("CAPTCHA".equalsIgnoreCase(cookie.getName())) {
                         token = cookie.getValue();
                         logger.info("验证码Token：{}", token);

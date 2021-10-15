@@ -8,9 +8,10 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Properties;
 
 /**
+ * 验证码的配置类
  * Created by Nuclear on 2021/1/28
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class KaptchaConfig {
 
     @Bean

@@ -8,6 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * NOTE - 2021/10/15 ROLE_的前缀不一定要加
  * 查看源码发现，ROLE_的前缀不一定要加
  * Created by Nuclear on 2021/1/26
  */
